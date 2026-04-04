@@ -1,11 +1,10 @@
 export async function getAnalysis(data) {
-  if (!data || !data.name) {
-    return fallback();
-  }
+  if (!data || !data.name) return fallback();
 
   const prompt = `
 Company: ${data.name}
 Current Price: ${data.price || "unknown"}
+Investment Amount: ${data.amount || "not provided"}
 
 Analyze and predict:
 
@@ -50,11 +49,10 @@ Return ONLY JSON:
       const start = text.indexOf("{");
       const end = text.lastIndexOf("}");
 
-      if (start !== -1 && end !== -1) {
-        parsed = JSON.parse(text.substring(start, end + 1));
-      } else {
-        throw new Error();
-      }
+      parsed =
+        start !== -1 && end !== -1
+          ? JSON.parse(text.substring(start, end + 1))
+          : fallback();
     } catch {
       parsed = fallback();
     }
@@ -70,7 +68,7 @@ Return ONLY JSON:
 function fallback() {
   return {
     verdict: Math.random() > 0.5 ? "INVEST" : "AVOID",
-    summary: "Simulated result (AI fallback)",
+    summary: "Simulated AI result",
     scores: {
       market: rand(),
       team: rand(),
@@ -82,7 +80,7 @@ function fallback() {
       growth: rand(),
     },
     pros: ["Stable outlook"],
-    cons: ["Needs more data"],
+    cons: ["Needs validation"],
   };
 }
 

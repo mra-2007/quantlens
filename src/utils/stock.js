@@ -1,8 +1,12 @@
 export async function getStockPrice(symbol) {
+  if (!symbol) return null;
+
   try {
     const res = await fetch(
       `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${import.meta.env.VITE_FINNHUB_API_KEY}`
     );
+
+    if (!res.ok) throw new Error("API error");
 
     const data = await res.json();
 
@@ -17,16 +21,19 @@ export async function getStockPrice(symbol) {
     return null;
   }
 }
+
 export function getSymbol(name) {
+  if (!name) return null;
+
   const map = {
-    apple: "AAPL",
     tesla: "TSLA",
-    google: "GOOGL",
+    apple: "AAPL",
     amazon: "AMZN",
+    google: "GOOGL",
     microsoft: "MSFT",
-    infosys: "INFY",
-    tcs: "TCS.NS",
     reliance: "RELIANCE.NS",
+    tcs: "TCS.NS",
+    infosys: "INFY",
   };
 
   return map[name.toLowerCase()] || null;
