@@ -44,12 +44,16 @@ Return ONLY JSON:
 `;
 
   try {
+    // 🔍 DEBUG ENV VARIABLE
+    console.log("ENV KEY:", import.meta.env.VITE_OPENROUTER_API_KEY);
+
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        // ✅ USE ENV VARIABLE (VERY IMPORTANT)
         Authorization: `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "HTTP-Referer": "https://ventureiq.vercel.app",
+        "X-Title": "VentureIQ",
       },
       body: JSON.stringify({
         model: "deepseek/deepseek-chat",
@@ -58,6 +62,9 @@ Return ONLY JSON:
     });
 
     const result = await res.json();
+
+    // 🔍 DEBUG RESPONSE
+    console.log("AI RESPONSE:", result);
 
     const text = result?.choices?.[0]?.message?.content || "";
 
@@ -76,7 +83,6 @@ Return ONLY JSON:
   } catch (err) {
     console.error("AI ERROR:", err);
 
-    // 🔥 FALLBACK (never breaks UI)
     return {
       verdict: "UNKNOWN",
       summary: "AI failed",
