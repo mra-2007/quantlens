@@ -1,5 +1,5 @@
 export async function getAnalysis(data) {
-  // 🔥 SAFETY CHECK (PREVENTS CRASH)
+  // 🔥 SAFETY CHECK
   if (!data || !data.name) {
     return {
       verdict: "UNKNOWN",
@@ -47,7 +47,8 @@ Return ONLY JSON:
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: "Bearer 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",
+        // ✅ USE ENV VARIABLE (VERY IMPORTANT)
+        Authorization: `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -57,19 +58,25 @@ Return ONLY JSON:
     });
 
     const result = await res.json();
-    const text = result.choices?.[0]?.message?.content || "";
 
+    const text = result?.choices?.[0]?.message?.content || "";
+
+    // 🔥 Extract JSON safely
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
 
-    if (start === -1 || end === -1) throw new Error("No JSON");
+    if (start === -1 || end === -1) {
+      throw new Error("No JSON found");
+    }
 
     const parsed = JSON.parse(text.substring(start, end + 1));
 
     return parsed;
+
   } catch (err) {
     console.error("AI ERROR:", err);
 
+    // 🔥 FALLBACK (never breaks UI)
     return {
       verdict: "UNKNOWN",
       summary: "AI failed",
