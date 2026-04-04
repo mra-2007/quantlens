@@ -4,9 +4,7 @@ export async function getAnalysis(data) {
   const prompt = `
 Company: ${data.name}
 Current Price: ${data.price || "unknown"}
-Investment Amount: ${data.amount || "not provided"}
-
-Analyze and predict:
+Investment: ${data.amount || "not provided"}
 
 Return ONLY JSON:
 {
@@ -28,36 +26,44 @@ Return ONLY JSON:
 `;
 
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "mistralai/mistral-7b-instruct",
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+    const res = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://ventureiq.vercel.app",
+          "X-Title": "VentureIQ",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-3.5-turbo",
+          messages: [{ role: "user", content: prompt }],
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      console.error("API STATUS:", res.status);
+      return fallback();
+    }
 
     const result = await res.json();
-    const text = result?.choices?.[0]?.message?.content || "";
 
-    let parsed;
+    if (!result || !result.choices) return fallback();
+
+    const text = result.choices[0].message.content || "";
 
     try {
       const start = text.indexOf("{");
       const end = text.lastIndexOf("}");
 
-      parsed =
-        start !== -1 && end !== -1
-          ? JSON.parse(text.substring(start, end + 1))
-          : fallback();
-    } catch {
-      parsed = fallback();
-    }
+      if (start === -1 || end === -1) return fallback();
 
-    return parsed;
+      return JSON.parse(text.substring(start, end + 1));
+    } catch {
+      return fallback();
+    }
 
   } catch (err) {
     console.error("AI ERROR:", err);
@@ -65,10 +71,11 @@ Return ONLY JSON:
   }
 }
 
+// 🔥 SAFE FALLBACK (NEVER BREAKS UI)
 function fallback() {
   return {
     verdict: Math.random() > 0.5 ? "INVEST" : "AVOID",
-    summary: "Simulated AI result",
+    summary: "Simulated result (AI fallback)",
     scores: {
       market: rand(),
       team: rand(),
@@ -80,7 +87,7 @@ function fallback() {
       growth: rand(),
     },
     pros: ["Stable outlook"],
-    cons: ["Needs validation"],
+    cons: ["Needs more validation"],
   };
 }
 

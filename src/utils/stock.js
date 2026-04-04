@@ -6,7 +6,10 @@ export async function getStockPrice(symbol) {
       `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${import.meta.env.VITE_FINNHUB_API_KEY}`
     );
 
-    if (!res.ok) throw new Error("API error");
+    if (!res.ok) {
+      console.error("Stock API status:", res.status);
+      return null;
+    }
 
     const data = await res.json();
 
@@ -22,6 +25,7 @@ export async function getStockPrice(symbol) {
   }
 }
 
+// 🔑 SYMBOL MAP
 export function getSymbol(name) {
   if (!name) return null;
 
