@@ -6,6 +6,11 @@ No AI, only math.
 
 Full Stack Web Development (22CAC11N) project.
 
+## Documents
+
+- [Project report (PDF)](docs/QuantLens_FSD_Project_Report.pdf)
+- [Presentation (PDF)](docs/QuantLens_Presentation.pdf)
+
 ## Features
 
 - **Trend:** SMA, EMA, MACD, Bollinger Bands
