@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'server']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -24,6 +24,8 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Pages reset loading/error state before each fetch; that's intentional.
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ])
