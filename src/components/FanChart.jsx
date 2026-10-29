@@ -6,7 +6,7 @@ import { ChartTip } from "./ui";
  * Monte Carlo fan chart: 5–95% and 25–75% percentile bands as range areas,
  * the median path, and a few raw sample paths for texture.
  */
-export default function FanChart({ result, history = [], currency }) {
+export default function FanChart({ result, history = [], currency, height = 380 }) {
   const tail = history.slice(-60);
   const n = tail.length;
   const rows = [
@@ -26,7 +26,7 @@ export default function FanChart({ result, history = [], currency }) {
   });
 
   return (
-    <ResponsiveContainer width="100%" height={380}>
+    <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={rows} margin={{ top: 10, right: 12, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={C.rule} strokeDasharray="2 4" vertical={false} />
         <XAxis dataKey="x" type="number" domain={["dataMin", "dataMax"]} tick={{ fill: C.muted, fontSize: 12 }} tickFormatter={(v) => (v === 0 ? "today" : v > 0 ? `+${v}d` : `${v}d`)} stroke={C.rule} />

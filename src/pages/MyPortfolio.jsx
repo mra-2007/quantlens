@@ -7,6 +7,7 @@ import { fmt, tone, C } from "../lib/format";
 import { readRows, detectHoldings } from "../lib/brokerImport";
 import FanChart from "../components/FanChart";
 import Heatmap from "../components/Heatmap";
+import HoldingsReport from "../components/HoldingsReport";
 import { SymbolSearch, ErrorNote, SimNote, Seg, ChartTip, Skeleton, Metric } from "../components/ui";
 
 const HORIZONS = { "1M": 21, "6M": 126, "1Y": 252 };
@@ -165,6 +166,8 @@ export default function MyPortfolio() {
           )}
         </>
       )}
+
+      {holdings?.length > 0 && <HoldingsReport holdings={holdings} horizon={horizon} setHorizon={setHorizon} horizons={HORIZONS} horizonWords={HORIZON_WORDS} />}
 
       {holdings !== null && <WhatIf holdings={holdings} range={range} horizon={horizon} setHorizon={setHorizon} base={base} />}
     </div>

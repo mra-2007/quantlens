@@ -263,6 +263,14 @@ api.post("/jobs/myportfolio", requireAuth, h(async (req, res) => {
   res.status(202).json(await enqueue("myportfolio", { holdings, add: body.add ?? null, range: body.range, days: body.days }, req.user.id));
 }));
 
+/** Each holding analysed on its own: signals, risk and its own Monte Carlo forecast. */
+api.post("/jobs/holdingsreport", requireAuth, h(async (req, res) => {
+  const body = parse(z.object({ days: z.number().int().min(5).max(504).default(126) }), req.body);
+  const holdings = (await db.holdings.list(req.user.id)).map(({ symbol, quantity, avgPrice }) => ({ symbol, quantity, avgPrice }));
+  if (!holdings.length) return res.status(400).json({ error: "Add a stock to your portfolio first" });
+  res.status(202).json(await enqueue("holdingsreport", { holdings, days: body.days }, req.user.id));
+}));
+
 // ---------- saved strategies (Pro) ----------
 api.get("/strategies", requirePro, h(async (req, res) => res.json({ strategies: await db.strategies.list(req.user.id) })));
 
