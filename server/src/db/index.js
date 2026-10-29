@@ -14,6 +14,7 @@ function pgRepo() {
   const one = async (text, params) => (await q(text, params))[0] ?? null;
   const user = (u) => u && { id: String(u.id), email: u.email, name: u.name, plan: u.plan, passwordHash: u.password_hash, createdAt: u.created_at };
   const strat = (s) => s && { id: String(s.id), name: s.name, symbol: s.symbol, config: s.config, lastResult: s.last_result, createdAt: s.created_at };
+  const holding = (h) => h && { id: String(h.id), symbol: h.symbol, quantity: Number(h.quantity), avgPrice: Number(h.avg_price), source: h.source, addedAt: h.added_at };
   const alert = (a) => a && { id: String(a.id), userId: String(a.user_id), symbol: a.symbol, direction: a.direction, target: Number(a.target), active: a.active, triggeredAt: a.triggered_at, triggeredPrice: a.triggered_price == null ? null : Number(a.triggered_price), createdAt: a.created_at, email: a.email };
 
   return {
@@ -45,6 +46,19 @@ function pgRepo() {
       active: async () => (await q("SELECT a.*, u.email FROM price_alerts a JOIN users u ON u.id = a.user_id WHERE a.active AND u.plan = 'pro'")).map(alert),
       trigger: async (id, price) => q("UPDATE price_alerts SET active = false, triggered_at = now(), triggered_price = $2 WHERE id = $1", [id, price]),
     },
+    holdings: {
+      list: async (userId) => (await q("SELECT * FROM holdings WHERE user_id = $1 ORDER BY added_at", [userId])).map(holding),
+      // Adding a stock you already hold merges the lots: quantities add, the average price is weighted.
+      add: async (userId, { symbol, quantity, avgPrice, source = "manual" }) => holding(await one(
+        `INSERT INTO holdings (user_id, symbol, quantity, avg_price, source) VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (user_id, symbol) DO UPDATE SET
+           avg_price = (holdings.quantity * holdings.avg_price + EXCLUDED.quantity * EXCLUDED.avg_price) / (holdings.quantity + EXCLUDED.quantity),
+           quantity = holdings.quantity + EXCLUDED.quantity
+         RETURNING *`, [userId, symbol, quantity, avgPrice, source])),
+      update: async (userId, id, { quantity, avgPrice }) => holding(await one("UPDATE holdings SET quantity = $3, avg_price = $4 WHERE user_id = $1 AND id = $2 RETURNING *", [userId, id, quantity, avgPrice])),
+      remove: async (userId, id) => q("DELETE FROM holdings WHERE user_id = $1 AND id = $2", [userId, id]),
+      clear: async (userId) => q("DELETE FROM holdings WHERE user_id = $1", [userId]),
+    },
     close: () => pool.end(),
   };
 }
@@ -55,6 +69,7 @@ function memoryRepo() {
   const watch = new Map();
   const strategies = [];
   const alerts = [];
+  const holdingsArr = [];
   const now = () => new Date().toISOString();
   return {
     kind: "memory",
@@ -114,6 +129,33 @@ function memoryRepo() {
       trigger: async (id, price) => {
         const a = alerts.find((x) => x.id === String(id));
         if (a) Object.assign(a, { active: false, triggeredAt: now(), triggeredPrice: price });
+      },
+    },
+    holdings: {
+      list: async (userId) => holdingsArr.filter((h) => h.userId === userId).map(({ userId: _u, ...h }) => ({ ...h })),
+      add: async (userId, { symbol, quantity, avgPrice, source = "manual" }) => {
+        const ex = holdingsArr.find((h) => h.userId === userId && h.symbol === symbol);
+        if (ex) {
+          ex.avgPrice = (ex.quantity * ex.avgPrice + quantity * avgPrice) / (ex.quantity + quantity);
+          ex.quantity += quantity;
+          return { ...ex };
+        }
+        const h = { id: String(seq++), userId, symbol, quantity, avgPrice, source, addedAt: now() };
+        holdingsArr.push(h);
+        return { ...h };
+      },
+      update: async (userId, id, { quantity, avgPrice }) => {
+        const h = holdingsArr.find((x) => x.userId === userId && x.id === String(id));
+        if (!h) return null;
+        Object.assign(h, { quantity, avgPrice });
+        return { ...h };
+      },
+      remove: async (userId, id) => {
+        const i = holdingsArr.findIndex((h) => h.userId === userId && h.id === String(id));
+        if (i >= 0) holdingsArr.splice(i, 1);
+      },
+      clear: async (userId) => {
+        for (let i = holdingsArr.length - 1; i >= 0; i--) if (holdingsArr[i].userId === userId) holdingsArr.splice(i, 1);
       },
     },
     close: async () => {},

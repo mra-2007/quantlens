@@ -19,6 +19,8 @@ Full Stack Web Development (22CAC11N) project.
 - **Portfolio:** correlation heatmap (2–5 stocks), Markowitz efficient frontier
 - **Forecasting:** linear regression trend, Monte Carlo fan chart (1,000 paths)
 - **Backtesting:** build rules from indicators and thresholds, compare with buy-and-hold
+- **My portfolio:** add your holdings or import a Groww / Zerodha / CSV statement; see value, P&L, allocation, trend, risk and correlation (USD stocks converted to ₹)
+- **What if I invest more?** Monte Carlo before-and-after: likely value, bad and good case, chance of profit and how risk and diversification change
 - **Accounts:** JWT login, watchlist, saved strategies, price-alert emails, Free/Pro plans
 
 ## Tech stack
@@ -70,7 +72,7 @@ and run `cd server && npm run migrate`.
 cd server
 npm test
 ```
-15 tests check the math engine against naive reference implementations.
+19 tests check the math engine and portfolio maths against naive reference implementations.
 
 ## Project structure
 

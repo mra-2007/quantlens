@@ -42,6 +42,7 @@ export function monteCarlo(closes, { days = 126, paths = 1000, seed = 42, sample
   const terminal = Float64Array.from(columns[days - 1]).sort();
   const histogram = buildHistogram(terminal, 30);
   const above = terminal.filter((v) => v > s0).length / paths;
+  const loss10 = terminal.filter((v) => v < s0 * 0.9).length / paths;
 
   return {
     s0,
@@ -57,6 +58,7 @@ export function monteCarlo(closes, { days = 126, paths = 1000, seed = 42, sample
       p95: percentileSorted(terminal, 0.95),
       mean: mean(terminal),
       probAbove: above,
+      probLoss10: loss10,
       histogram,
     },
   };

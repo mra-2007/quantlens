@@ -27,7 +27,8 @@ export function TopBar() {
           <NavLink to="/s/AAPL">Analyze</NavLink>
           <NavLink to="/compare">Compare</NavLink>
           <NavLink to="/backtest">Backtest</NavLink>
-          <NavLink to="/portfolio">Portfolio</NavLink>
+          <NavLink to="/portfolio">Optimiser</NavLink>
+          {user && <NavLink to="/my-portfolio">My portfolio</NavLink>}
           {user && <NavLink to="/dashboard">Dashboard</NavLink>}
         </nav>
         <SymbolSearch className="search" />

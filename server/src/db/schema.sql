@@ -39,3 +39,14 @@ CREATE TABLE IF NOT EXISTS price_alerts (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS price_alerts_active_idx ON price_alerts(active) WHERE active;
+
+CREATE TABLE IF NOT EXISTS holdings (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  symbol     TEXT NOT NULL,
+  quantity   NUMERIC(18, 6) NOT NULL CHECK (quantity > 0),
+  avg_price  NUMERIC(18, 6) NOT NULL CHECK (avg_price >= 0),
+  source     TEXT NOT NULL DEFAULT 'manual',
+  added_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, symbol)
+);

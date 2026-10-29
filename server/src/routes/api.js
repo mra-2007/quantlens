@@ -11,6 +11,7 @@ import { correlationMatrix } from "../quant/portfolio.js";
 import { simpleReturns, alignCloses, betaVsIndex, volatility, sharpeRatio, maxDrawdown } from "../quant/risk.js";
 import { PRESETS, validateStrategy, INDICATORS } from "../quant/backtest.js";
 import { enqueue, getJob } from "../jobs/queue.js";
+import { resolveSymbol } from "../lib/resolve.js";
 
 export const api = Router();
 
@@ -205,6 +206,61 @@ api.post("/watchlist", requireAuth, h(async (req, res) => {
 api.delete("/watchlist/:symbol", requireAuth, h(async (req, res) => {
   await db.watchlist.remove(req.user.id, normaliseSymbol(req.params.symbol));
   res.json({ items: await db.watchlist.list(req.user.id) });
+}));
+
+// ---------- my portfolio: the user's real holdings (signed in) ----------
+const MAX_HOLDINGS = 50;
+const holdingSchema = z.object({ symbol: symbolSchema, quantity: z.number().positive().max(1e9), avgPrice: z.number().min(0).max(1e9) });
+
+api.get("/holdings", requireAuth, h(async (req, res) => res.json({ holdings: await db.holdings.list(req.user.id) })));
+
+api.post("/holdings", requireAuth, h(async (req, res) => {
+  const body = parse(holdingSchema, req.body);
+  const list = await db.holdings.list(req.user.id);
+  if (list.length >= MAX_HOLDINGS && !list.some((x) => x.symbol === body.symbol)) return res.status(400).json({ error: `A portfolio can hold up to ${MAX_HOLDINGS} stocks` });
+  await getHistory(body.symbol, "6mo"); // rejects symbols with no price data
+  await db.holdings.add(req.user.id, body);
+  res.status(201).json({ holdings: await db.holdings.list(req.user.id) });
+}));
+
+api.patch("/holdings/:id", requireAuth, h(async (req, res) => {
+  const body = parse(holdingSchema.pick({ quantity: true, avgPrice: true }), req.body);
+  const updated = await db.holdings.update(req.user.id, req.params.id, body);
+  if (!updated) return res.status(404).json({ error: "Holding not found" });
+  res.json({ holdings: await db.holdings.list(req.user.id) });
+}));
+
+api.delete("/holdings/:id", requireAuth, h(async (req, res) => {
+  await db.holdings.remove(req.user.id, req.params.id);
+  res.json({ holdings: await db.holdings.list(req.user.id) });
+}));
+
+/** Step 1 of an import: map each broker row (symbol, company name or ISIN) to a ticker. */
+api.post("/holdings/resolve", requireAuth, h(async (req, res) => {
+  const { items } = parse(z.object({ items: z.array(z.object({ symbol: z.string().max(40).optional(), name: z.string().max(200).optional(), isin: z.string().max(20).optional() })).min(1).max(MAX_HOLDINGS) }), req.body);
+  const out = [];
+  for (const it of items) out.push(await resolveSymbol(it).catch(() => ({ symbol: null, name: null, via: "none" })));
+  res.json({ results: out });
+}));
+
+/** Step 2 of an import: save the confirmed rows, replacing or merging with what is there. */
+api.post("/holdings/import", requireAuth, h(async (req, res) => {
+  const { rows, mode } = parse(z.object({ rows: z.array(holdingSchema).min(1).max(MAX_HOLDINGS), mode: z.enum(["replace", "merge"]).default("replace") }), req.body);
+  if (mode === "replace") await db.holdings.clear(req.user.id);
+  for (const r of rows) await db.holdings.add(req.user.id, { ...r, source: "import" });
+  res.status(201).json({ holdings: await db.holdings.list(req.user.id) });
+}));
+
+/** Portfolio analysis and "what if I invest more?" run as a background job. */
+api.post("/jobs/myportfolio", requireAuth, h(async (req, res) => {
+  const body = parse(z.object({
+    range: rangeSchema.default("1y"),
+    days: z.number().int().min(5).max(504).default(126),
+    add: z.object({ symbol: symbolSchema, amount: z.number().positive().max(1e10) }).nullable().optional(),
+  }), req.body);
+  const holdings = (await db.holdings.list(req.user.id)).map(({ symbol, quantity, avgPrice }) => ({ symbol, quantity, avgPrice }));
+  if (!holdings.length && !body.add) return res.status(400).json({ error: "Add a stock to your portfolio first" });
+  res.status(202).json(await enqueue("myportfolio", { holdings, add: body.add ?? null, range: body.range, days: body.days }, req.user.id));
 }));
 
 // ---------- saved strategies (Pro) ----------

@@ -212,7 +212,7 @@ h3 {
 }
 .topbar .search {
   margin-left: auto;
-  width: min(300px, 32vw);
+  width: min(260px, 22vw);
 }
 @media (max-width: 760px) {
   .topbar-inner {

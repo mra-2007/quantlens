@@ -20,6 +20,7 @@ export const DEMO_UNIVERSE = [
   { symbol: "HDFCBANK.NS", name: "HDFC Bank Ltd", exchange: "NSE", start: 1550, mu: 0.0002, sigma: 0.013, beta: 0.9 },
   { symbol: "^GSPC", name: "S&P 500", exchange: "INDEX", start: 4000, mu: 0.0004, sigma: 0.011, beta: 1.0 },
   { symbol: "^NSEI", name: "NIFTY 50", exchange: "INDEX", start: 18000, mu: 0.0004, sigma: 0.01, beta: 1.0 },
+  { symbol: "USDINR=X", name: "US Dollar / Indian Rupee", exchange: "FX", start: 82, mu: 0.0001, sigma: 0.003, beta: 0 },
 ];
 
 const hash = (s) => [...s].reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 2166136261);

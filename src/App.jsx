@@ -11,6 +11,7 @@ const Compare = lazy(() => import("./pages/Compare"));
 const Backtest = lazy(() => import("./pages/Backtest"));
 const Portfolio = lazy(() => import("./pages/Portfolio"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MyPortfolio = lazy(() => import("./pages/MyPortfolio"));
 
 function Shell() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/backtest" element={<Backtest />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/my-portfolio" element={<MyPortfolio />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

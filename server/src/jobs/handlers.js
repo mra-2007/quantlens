@@ -5,6 +5,7 @@ import { runBacktest } from "../quant/backtest.js";
 import { efficientFrontier, correlationMatrix } from "../quant/portfolio.js";
 import { simpleReturns, alignCloses } from "../quant/risk.js";
 import { config } from "../config.js";
+import { analyzeMyPortfolio } from "../quant/myportfolio.js";
 
 export const handlers = {
   async montecarlo({ symbol, range = "2y", days = 126, paths = 1000, seed }) {
@@ -27,6 +28,28 @@ export const handlers = {
     const ef = efficientFrontier(returns, { samples, riskFree: config.riskFreeRate });
     return { ...ef, correlation: correlationMatrix(returns), observations: dates.length, simulated: histories.some((h) => h.simulated) };
   },
+};
+
+/** Analysis of the user's own holdings, plus the optional "what if I add money" simulation. */
+handlers.myportfolio = async ({ holdings, add = null, range = "1y", days = 126 }) => {
+  const symbols = [...new Set([...holdings.map((h) => h.symbol), ...(add ? [add.symbol] : [])])];
+  const fetched = await Promise.all(symbols.map((s) => getHistory(s, range)));
+  const histories = Object.fromEntries(fetched.map((h) => [h.symbol, h]));
+  const currencies = [...new Set(fetched.map((h) => h.currency))];
+  const base = currencies.length === 1 ? currencies[0] : "INR";
+  const fx = currencies.length > 1 ? await getHistory("USDINR=X", range) : null;
+  const index = await getHistory(base === "INR" ? "^NSEI" : config.defaultIndex, range).catch(() => null);
+  const result = analyzeMyPortfolio({
+    holdings,
+    histories,
+    base,
+    fxCandles: fx?.candles ?? null,
+    indexCandles: index?.candles ?? null,
+    add,
+    days,
+    riskFree: config.riskFreeRate,
+  });
+  return { ...result, index: index?.symbol ?? null, simulated: fetched.some((h) => h.simulated) };
 };
 
 export const JOB_TYPES = Object.keys(handlers);
