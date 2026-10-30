@@ -9,6 +9,7 @@ import { analyzeMyPortfolio } from "../quant/myportfolio.js";
 import { holdingReport } from "../quant/stockreport.js";
 import { analyseRegimes } from "../quant/regime.js";
 import { evolveStrategies } from "../quant/evolve.js";
+import { findTwins } from "../quant/twins.js";
 
 export const handlers = {
   async montecarlo({ symbol, range = "2y", days = 126, paths = 1000, seed }) {
@@ -67,6 +68,19 @@ handlers.evolve = async ({ symbol, population = 40, generations = 25, seed }) =>
   const h = await getHistory(symbol, "5y");
   const res = evolveStrategies(h.candles, { population, generations, seed: seed ?? 7 });
   return { symbol: h.symbol, currency: h.currency, simulated: !!h.simulated, ...res };
+};
+
+const PEERS_IN = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "ITC.NS", "LT.NS", "BHARTIARTL.NS", "KOTAKBANK.NS", "AXISBANK.NS", "HINDUNILVR.NS"];
+const PEERS_US = ["AAPL", "MSFT", "GOOGL", "AMZN", "JPM", "KO", "XOM", "NVDA", "TSLA"];
+
+/** Finds the past chart shapes (this stock and peers) most similar to today's, and what happened next. */
+handlers.twins = async ({ symbol, length = 40, horizon = 21 }) => {
+  const peers = (/\.(NS|BO)$/i.test(symbol) ? PEERS_IN : PEERS_US).filter((s) => s !== symbol);
+  const [target, ...rest] = await Promise.allSettled([getHistory(symbol, "5y"), ...peers.map((s) => getHistory(s, "5y"))]);
+  if (target.status !== "fulfilled") throw target.reason;
+  const histories = [target.value, ...rest.filter((r) => r.status === "fulfilled").map((r) => r.value)];
+  const res = findTwins(histories.map((h) => ({ symbol: h.symbol, candles: h.candles })), { target: target.value.symbol, length, horizon });
+  return { symbol: target.value.symbol, currency: target.value.currency, simulated: histories.some((h) => h.simulated), ...res };
 };
 
 /** One analysis + forecast per holding, each on its own two-year history. */
