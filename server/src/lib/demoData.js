@@ -42,15 +42,31 @@ function marketShocks(count) {
   return Array.from({ length: count }, () => z() * 0.01);
 }
 
+/**
+ * Market-wide volatility regimes (calm / normal / stormy) from a sticky seeded Markov chain,
+ * so demo prices show the volatility clustering real markets have.
+ */
+function volatilityRegimes(count) {
+  const u = rng(777);
+  const stay = [0.985, 0.98, 0.95];
+  const mult = [0.65, 1, 2.1];
+  let state = 1;
+  return Array.from({ length: count }, () => {
+    if (u() > stay[state]) state = state === 1 ? (u() < 0.7 ? 0 : 2) : 1;
+    return mult[state];
+  });
+}
+
 export function syntheticCandles(symbol, count = 1260, end) {
   const meta = DEMO_UNIVERSE.find((u) => u.symbol === symbol) ?? { start: 50 + (hash(symbol) % 400), mu: 0.0004, sigma: 0.02, beta: 1 };
   const dates = tradingDays(count, end);
   const market = marketShocks(count);
+  const vol = volatilityRegimes(count);
   const z = normalSampler(rng(hash(symbol)));
   const idio = Math.sqrt(Math.max(meta.sigma ** 2 - (meta.beta * 0.01) ** 2, 0.00002));
   let price = meta.start;
   return dates.map((time, i) => {
-    const ret = meta.mu + meta.beta * market[i] + idio * z();
+    const ret = meta.mu + vol[i] * (meta.beta * market[i] + idio * z());
     const open = price * (1 + z() * meta.sigma * 0.25);
     const close = price * Math.exp(ret);
     const high = Math.max(open, close) * (1 + Math.abs(z()) * meta.sigma * 0.4);

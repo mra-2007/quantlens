@@ -174,6 +174,8 @@ const efSchema = z.object({ symbols: z.array(symbolSchema).min(2).max(10), range
 
 api.post("/jobs/montecarlo", h(async (req, res) => res.status(202).json(await enqueue("montecarlo", parse(mcSchema, req.body), req.user?.id))));
 
+api.post("/jobs/regime", h(async (req, res) => res.status(202).json(await enqueue("regime", parse(z.object({ symbol: symbolSchema, days: z.number().int().min(5).max(504).default(126), paths: z.number().int().min(100).max(5000).default(1000), seed: z.number().int().optional() }), req.body), req.user?.id))));
+
 api.post("/jobs/backtest", requirePro, h(async (req, res) => {
   const body = parse(btSchema, req.body);
   const errors = validateStrategy(body.strategy);

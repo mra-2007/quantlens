@@ -7,6 +7,7 @@ import { simpleReturns, alignCloses } from "../quant/risk.js";
 import { config } from "../config.js";
 import { analyzeMyPortfolio } from "../quant/myportfolio.js";
 import { holdingReport } from "../quant/stockreport.js";
+import { analyseRegimes } from "../quant/regime.js";
 
 export const handlers = {
   async montecarlo({ symbol, range = "2y", days = 126, paths = 1000, seed }) {
@@ -51,6 +52,13 @@ handlers.myportfolio = async ({ holdings, add = null, range = "1y", days = 126 }
     riskFree: config.riskFreeRate,
   });
   return { ...result, index: index?.symbol ?? null, simulated: fetched.some((h) => h.simulated) };
+};
+
+/** Hidden Markov Model regimes for one stock (trained on up to 5 years), plus the regime-aware forecast. */
+handlers.regime = async ({ symbol, days = 126, paths = 1000, seed }) => {
+  const h = await getHistory(symbol, "5y");
+  const res = analyseRegimes(h.candles, { days, paths, seed: seed ?? 42 });
+  return { symbol: h.symbol, currency: h.currency, simulated: !!h.simulated, lastDate: h.candles.at(-1).time, ...res };
 };
 
 /** One analysis + forecast per holding, each on its own two-year history. */

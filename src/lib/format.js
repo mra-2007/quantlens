@@ -31,3 +31,7 @@ export const C = {
   sky: "#6CB8FF",
   series: ["#F2B544", "#6CB8FF", "#3DD6B5", "#A79BFF", "#FF8FB1"],
 };
+
+/** Calm / Choppy / Stress colours for the HMM regimes, and the soft tints used behind the price chart. */
+export const REGIME_COLORS = [C.up, C.amber, C.down];
+export const REGIME_TINT = ["rgba(61,214,181,0.13)", "rgba(242,181,68,0.11)", "rgba(255,107,107,0.2)"];

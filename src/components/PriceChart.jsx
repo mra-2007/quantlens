@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { createChart, CandlestickSeries, LineSeries, HistogramSeries, LineStyle } from "lightweight-charts";
-import { C } from "../lib/format";
+import { createChart, CandlestickSeries, LineSeries, HistogramSeries, AreaSeries, LineStyle, LineType } from "lightweight-charts";
+import { C, REGIME_TINT } from "../lib/format";
 
 const toLine = (candles, values) => candles.map((c, i) => (values[i] == null ? { time: c.time } : { time: c.time, value: values[i] }));
 
@@ -19,7 +19,7 @@ export const OVERLAYS = [
  * Candlestick chart (TradingView Lightweight Charts v5) with indicator overlays in
  * the main pane and one oscillator pane underneath.
  */
-export default function PriceChart({ data, overlays, oscillator }) {
+export default function PriceChart({ data, overlays, oscillator, regime = null }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -40,6 +40,28 @@ export default function PriceChart({ data, overlays, oscillator }) {
       timeScale: { borderColor: C.rule, rightOffset: 4 },
       crosshair: { vertLine: { color: "#5D6E88", labelBackgroundColor: "#2C3F5C" }, horzLine: { color: "#5D6E88", labelBackgroundColor: "#2C3F5C" } },
     });
+
+    // Market regimes (Hidden Markov Model): a full-height tint behind the candles, one colour per regime.
+    // One stepped area series per regime (gaps where the stock was in another regime) fills without stripes.
+    if (regime?.length) {
+      const state = new Map(regime.map((p) => [p.time, p.state]));
+      REGIME_TINT.forEach((tint, k) => {
+        const band = chart.addSeries(AreaSeries, {
+          priceScaleId: "regime",
+          lineColor: "rgba(0,0,0,0)",
+          topColor: tint,
+          bottomColor: tint,
+          lineWidth: 1,
+          lineType: LineType.WithSteps,
+          lastValueVisible: false,
+          priceLineVisible: false,
+          crosshairMarkerVisible: false,
+          autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 1 } }),
+        });
+        band.priceScale().applyOptions({ scaleMargins: { top: 0, bottom: 0 }, visible: false });
+        band.setData(candles.map((c) => (state.get(c.time) === k ? { time: c.time, value: 1 } : { time: c.time })));
+      });
+    }
 
     const candle = chart.addSeries(CandlestickSeries, {
       upColor: C.up, downColor: C.down, borderUpColor: C.up, borderDownColor: C.down, wickUpColor: C.up, wickDownColor: C.down,
@@ -91,7 +113,7 @@ export default function PriceChart({ data, overlays, oscillator }) {
 
     chart.timeScale().fitContent();
     return () => chart.remove();
-  }, [data, overlays, oscillator]);
+  }, [data, overlays, oscillator, regime]);
 
   return <div ref={ref} className="chart-box" />;
 }

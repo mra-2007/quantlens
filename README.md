@@ -2,7 +2,7 @@
 
 A mathematical stock analysis platform. Search a stock and QuantLens computes classic
 quantitative indicators, risk metrics, forecasts and backtests from its price history.
-No AI, only math.
+Maths first: every number has a formula. One AI layer (a Hidden Markov Model for market regimes) runs on the same maths, trained locally with no API.
 
 Full Stack Web Development (22CAC11N) project.
 
@@ -21,6 +21,7 @@ Full Stack Web Development (22CAC11N) project.
 - **Backtesting:** build rules from indicators and thresholds, compare with buy-and-hold
 - **My portfolio:** add your holdings or import a Groww / Zerodha / CSV statement; see value, P&L, allocation, trend, risk and correlation (USD stocks converted to ₹)
 - **Each stock, analysed:** for every holding, 8 mechanical signals (SMA 50/200, golden cross, MACD, RSI, Stochastic, Bollinger %B, regression slope), risk metrics and its own Monte Carlo forecast applied to your quantity
+- **AI market regimes:** a Hidden Markov Model (Baum–Welch + Viterbi, written from scratch) learns Calm / Choppy / Stress regimes from returns, shades them on the chart, and powers a regime-aware Monte Carlo where volatility follows the regime
 - **What if I invest more?** Monte Carlo before-and-after: likely value, bad and good case, chance of profit and how risk and diversification change
 - **Accounts:** JWT login, watchlist, saved strategies, price-alert emails, Free/Pro plans
 
@@ -73,13 +74,13 @@ and run `cd server && npm run migrate`.
 cd server
 npm test
 ```
-21 tests check the math engine and portfolio maths against naive reference implementations.
+25 tests check the math engine and portfolio maths against naive reference implementations.
 
 ## Project structure
 
 ```
 src/                React frontend (pages, components, lib)
-server/src/quant/   math engine (indicators, risk, portfolio, forecast, backtest)
+server/src/quant/   math engine (indicators, risk, portfolio, forecast, backtest) and the HMM regime model (regime.js)
 server/src/lib/     market data, cache, auth, alerts
 server/src/jobs/    BullMQ queue and worker
 server/src/db/      schema.sql and data access

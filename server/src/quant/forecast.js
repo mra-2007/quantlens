@@ -31,6 +31,15 @@ export function monteCarlo(closes, { days = 126, paths = 1000, seed = 42, sample
     if (keep) samples.push(keep);
   }
 
+  return { s0, days, paths, drift: mu, sigma, samplePaths: samples, ...summarisePaths(columns, s0, days, paths) };
+}
+
+/**
+ * Turns simulated prices (columns[t][p] = price of path p at step t+1) into fan-chart
+ * percentile bands and the distribution of ending prices. Shared by the plain GBM
+ * simulation above and the regime-switching one in regime.js.
+ */
+export function summarisePaths(columns, s0, days, paths) {
   const qs = [0.05, 0.25, 0.5, 0.75, 0.95];
   const bands = [{ step: 0, p5: s0, p25: s0, p50: s0, p75: s0, p95: s0, mean: s0 }];
   for (let t = 0; t < days; t++) {
@@ -45,13 +54,7 @@ export function monteCarlo(closes, { days = 126, paths = 1000, seed = 42, sample
   const loss10 = terminal.filter((v) => v < s0 * 0.9).length / paths;
 
   return {
-    s0,
-    days,
-    paths,
-    drift: mu,
-    sigma,
     bands,
-    samplePaths: samples,
     terminal: {
       p5: percentileSorted(terminal, 0.05),
       p50: percentileSorted(terminal, 0.5),

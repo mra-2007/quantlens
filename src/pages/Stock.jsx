@@ -3,9 +3,10 @@ import { useParams, Link } from "react-router-dom";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell, ReferenceLine } from "recharts";
 import { api, runJob } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { fmt, tone, C } from "../lib/format";
+import { fmt, tone, C, REGIME_COLORS } from "../lib/format";
 import PriceChart, { OVERLAYS } from "../components/PriceChart";
 import FanChart from "../components/FanChart";
+import RegimePanel from "../components/RegimePanel";
 import { Metric, ErrorNote, SimNote, Seg, ChartTip, Skeleton } from "../components/ui";
 
 const RANGE_OPTS = ["6mo", "1y", "2y", "5y"];
@@ -20,6 +21,20 @@ export default function Stock() {
   const [error, setError] = useState(null);
   const [overlays, setOverlays] = useState(["sma50", "sma200", "bb"]);
   const [osc, setOsc] = useState("RSI");
+  const [showRegime, setShowRegime] = useState(true);
+  const [regime, setRegime] = useState(null);
+  const [regimeError, setRegimeError] = useState(null);
+
+  // The AI regime model trains on up to 5 years, independent of the chart's range.
+  useEffect(() => {
+    const ctl = new AbortController();
+    setRegime(null);
+    setRegimeError(null);
+    runJob("regime", { symbol, days: HORIZONS["6M"], paths: 1000 }, { signal: ctl.signal })
+      .then(setRegime)
+      .catch((e) => e.name !== "AbortError" && setRegimeError(e));
+    return () => ctl.abort();
+  }, [symbol]);
 
   useEffect(() => {
     const ctl = new AbortController();
@@ -92,11 +107,22 @@ export default function Stock() {
                 <span className="dot" style={{ background: o.color }} />{o.label}
               </button>
             ))}
+            <button className="chip" aria-pressed={showRegime} onClick={() => setShowRegime((v) => !v)} disabled={!regime} title={regime ? "Shade the chart by AI-detected market regime" : regimeError ? "Regimes unavailable for this stock" : "Training the regime model…"}>
+              <span className="dot" style={{ background: "linear-gradient(90deg, #3DD6B5, #F2B544, #FF6B6B)" }} />Regimes (AI)
+            </button>
           </div>
           <Seg label="Oscillator" value={osc} options={["RSI", "MACD", "Stochastic"]} onChange={setOsc} />
         </div>
-        <PriceChart data={data} overlays={overlays} oscillator={osc} />
+        {showRegime && regime && (
+          <div className="row small muted" style={{ gap: 16, padding: "0 16px 8px" }}>
+            {regime.regimes.map((g, k) => <span key={g.name}><span style={{ color: REGIME_COLORS[k] }}>■</span> {g.name}</span>)}
+            <span className="faint">AI-detected market regime, shaded behind the candles</span>
+          </div>
+        )}
+        <PriceChart data={data} overlays={overlays} oscillator={osc} regime={showRegime ? regime?.path : null} />
       </section>
+
+      <RegimePanel regime={regime} error={regimeError} loading={!regime && !regimeError} />
 
       <section>
         <div className="panel-head">
@@ -157,19 +183,38 @@ export default function Stock() {
 
 function MonteCarlo({ symbol, candles, currency }) {
   const [horizon, setHorizon] = useState("6M");
-  const [result, setResult] = useState(null);
+  const [model, setModel] = useState("Classic");
+  const [classic, setClassic] = useState(null);
+  const [aware, setAware] = useState(null);
   const [state, setState] = useState(null);
   const [error, setError] = useState(null);
+  const [awareError, setAwareError] = useState(null);
 
   useEffect(() => {
     const ctl = new AbortController();
-    setResult(null);
+    setClassic(null);
     setError(null);
     runJob("montecarlo", { symbol, days: HORIZONS[horizon], paths: 1000, range: "2y" }, { onState: setState, signal: ctl.signal })
-      .then(setResult)
+      .then(setClassic)
       .catch((e) => e.name !== "AbortError" && setError(e));
     return () => ctl.abort();
   }, [symbol, horizon]);
+
+  // The regime-aware forecast is only computed when someone asks for it.
+  useEffect(() => {
+    if (model !== "Regime-aware") return undefined;
+    const ctl = new AbortController();
+    setAware(null);
+    setAwareError(null);
+    runJob("regime", { symbol, days: HORIZONS[horizon], paths: 1000 }, { signal: ctl.signal })
+      .then(setAware)
+      .catch((e) => e.name !== "AbortError" && setAwareError(e));
+    return () => ctl.abort();
+  }, [symbol, horizon, model]);
+
+  const isAware = model === "Regime-aware";
+  const result = isAware ? aware?.forecast : classic;
+  const err = isAware ? awareError : error;
 
   const hist = useMemo(() => {
     if (!result) return [];
@@ -181,14 +226,21 @@ function MonteCarlo({ symbol, candles, currency }) {
       <div className="panel-head">
         <div>
           <h2 className="h3">Monte Carlo forecast</h2>
-          <p className="muted small">1,000 simulated paths of geometric Brownian motion, calibrated on two years of log returns.</p>
+          <p className="muted small">
+            {isAware
+              ? "1,000 simulated paths where volatility switches with the AI-detected market regime, starting from today’s regime probabilities."
+              : "1,000 simulated paths of geometric Brownian motion, calibrated on two years of log returns."}
+          </p>
         </div>
-        <Seg label="Horizon" value={horizon} options={Object.keys(HORIZONS)} onChange={setHorizon} />
+        <div className="row" style={{ gap: 10 }}>
+          <Seg label="Model" value={model} options={["Classic", "Regime-aware"]} onChange={setModel} />
+          <Seg label="Horizon" value={horizon} options={Object.keys(HORIZONS)} onChange={setHorizon} />
+        </div>
       </div>
-      <ErrorNote error={error} />
-      {!result && !error && (
+      <ErrorNote error={err} />
+      {!result && !err && (
         <div className="stack">
-          <p className="faint small">{state === "active" ? "Simulating 1,000 paths…" : "Queued…"}</p>
+          <p className="faint small">{isAware ? "Training the regime model and simulating…" : state === "active" ? "Simulating 1,000 paths…" : "Queued…"}</p>
           <Skeleton h={340} />
         </div>
       )}
@@ -217,11 +269,35 @@ function MonteCarlo({ symbol, candles, currency }) {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <p className="math small muted">μ = {fmt.num(result.drift * 100, 3)}%/day, σ = {fmt.num(result.sigma * 100, 2)}%/day</p>
+            {isAware ? <RegimeCompare aware={aware} currency={currency} /> : (
+              <p className="math small muted">μ = {fmt.num(result.drift * 100, 3)}%/day, σ = {fmt.num(result.sigma * 100, 2)}%/day</p>
+            )}
           </div>
         </div>
       )}
     </section>
+  );
+}
+
+/** Side-by-side of the plain GBM and the regime-aware forecast, plus how the regimes mix over the horizon. */
+function RegimeCompare({ aware, currency }) {
+  const { plain, regimeTerminal: reg, forecast, now, regimes } = aware;
+  const width = (t) => t.p95 - t.p5;
+  const change = width(reg) / width(plain) - 1;
+  return (
+    <div className="stack small" style={{ "--gap": "8px" }}>
+      <div className="faint">Plain model vs regime-aware (same drift, different volatility)</div>
+      <div className="spread"><span className="muted">Plain GBM, 90% range</span><b>{fmt.money(plain.p5, currency, 0)} – {fmt.money(plain.p95, currency, 0)}</b></div>
+      <div className="spread"><span className="muted">Regime-aware, 90% range</span><b>{fmt.money(reg.p5, currency, 0)} – {fmt.money(reg.p95, currency, 0)}</b></div>
+      <p className="muted" style={{ margin: "4px 0 0" }}>
+        Starting in <b style={{ color: REGIME_COLORS[now.state] }}>{now.name}</b> ({fmt.pctAbs(now.prob, 0)} sure), the regime-aware range is{" "}
+        <b>{fmt.pctAbs(Math.abs(change), 0)} {change < 0 ? "narrower" : "wider"}</b>. {fmt.pctAbs(forecast.probStress, 0)} of paths hit at least one {regimes[2].name} episode.
+      </p>
+      <div className="row" style={{ gap: 12 }}>
+        <span className="faint">Time spent in:</span>
+        {regimes.map((g, k) => <span key={g.name}><span style={{ color: REGIME_COLORS[k] }}>●</span> {g.name} <b>{fmt.pctAbs(forecast.regimeMix[k], 0)}</b></span>)}
+      </div>
+    </div>
   );
 }
 
