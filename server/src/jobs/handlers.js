@@ -11,6 +11,8 @@ import { analyseRegimes } from "../quant/regime.js";
 import { evolveStrategies } from "../quant/evolve.js";
 import { findTwins } from "../quant/twins.js";
 import { analyseAnomalies } from "../quant/anomaly.js";
+import { analyseNeural } from "../quant/neural.js";
+import { analyseXRay } from "../quant/xray.js";
 
 export const handlers = {
   async montecarlo({ symbol, range = "2y", days = 126, paths = 1000, seed }) {
@@ -124,6 +126,27 @@ handlers.holdingsreport = async ({ holdings, days = 126 }) => {
     }
   }));
   return { days, stocks, simulated };
+};
+
+/** Neural network trained walk-forward on one stock, with an honest report card on unseen days. */
+handlers.neural = async ({ symbol }) => {
+  const h = await getHistory(symbol, "5y");
+  return { symbol: h.symbol, currency: h.currency, simulated: !!h.simulated, ...analyseNeural(h.candles) };
+};
+
+/** Unsupervised X-ray of the user's holdings: effective bets, clusters, where the risk really sits. */
+handlers.xray = async ({ holdings }) => {
+  const fetched = await Promise.all(holdings.map((x) => getHistory(x.symbol, "2y")));
+  const currencies = [...new Set(fetched.map((h) => h.currency))];
+  const fx = currencies.length > 1 ? await getHistory("USDINR=X", "2y").catch(() => null) : null;
+  const rate = fx?.candles.at(-1)?.close ?? 83;
+  const { closes } = alignCloses(Object.fromEntries(fetched.map((h) => [h.symbol, h.candles])));
+  const stocks = holdings.map((x, i) => {
+    const h = fetched[i];
+    const value = x.quantity * h.candles.at(-1).close * (currencies.length > 1 && h.currency === "USD" ? rate : 1);
+    return { symbol: h.symbol, weight: value, returns: simpleReturns(closes[h.symbol]) };
+  });
+  return { simulated: fetched.some((h) => h.simulated), ...analyseXRay(stocks) };
 };
 
 export const JOB_TYPES = Object.keys(handlers);

@@ -182,6 +182,8 @@ api.post("/jobs/twins", h(async (req, res) => res.status(202).json(await enqueue
 
 api.post("/jobs/anomaly", h(async (req, res) => res.status(202).json(await enqueue("anomaly", parse(z.object({ symbol: symbolSchema }), req.body), req.user?.id))));
 
+api.post("/jobs/neural", h(async (req, res) => res.status(202).json(await enqueue("neural", parse(z.object({ symbol: symbolSchema }), req.body), req.user?.id))));
+
 api.post("/jobs/backtest", requirePro, h(async (req, res) => {
   const body = parse(btSchema, req.body);
   const errors = validateStrategy(body.strategy);
@@ -277,6 +279,13 @@ api.post("/jobs/holdingsreport", requireAuth, h(async (req, res) => {
   const holdings = (await db.holdings.list(req.user.id)).map(({ symbol, quantity, avgPrice }) => ({ symbol, quantity, avgPrice }));
   if (!holdings.length) return res.status(400).json({ error: "Add a stock to your portfolio first" });
   res.status(202).json(await enqueue("holdingsreport", { holdings, days: body.days }, req.user.id));
+}));
+
+/** AI X-ray of the user's holdings: independent bets, clusters and hidden risk. */
+api.post("/jobs/xray", requireAuth, h(async (req, res) => {
+  const holdings = (await db.holdings.list(req.user.id)).map(({ symbol, quantity, avgPrice }) => ({ symbol, quantity, avgPrice }));
+  if (holdings.length < 3) return res.status(400).json({ error: "Add at least 3 stocks to your portfolio to see how your risk is grouped" });
+  res.status(202).json(await enqueue("xray", { holdings }, req.user.id));
 }));
 
 // ---------- saved strategies (Pro) ----------

@@ -4,10 +4,12 @@ import { SymbolSearch } from "../components/ui";
 import Evolution from "../components/lab/Evolution";
 import Twins from "../components/lab/Twins";
 import Anomalies from "../components/lab/Anomalies";
+import Neural from "../components/lab/Neural";
 
 const DEFAULT = "RELIANCE.NS";
 
 const FEATURES = [
+  { key: "neural", title: "Neural Forecaster", family: "Deep learning · Neural network", blurb: "A neural network predicts the next 5 days, then grades itself on days it never saw. Honest when it cannot beat guessing.", Component: Neural },
   { key: "evolution", title: "Strategy Evolution", family: "Evolutionary AI", blurb: "Trading rules breed, mutate and compete over 25 generations. The champion is tested on years it never saw.", Component: Evolution },
   { key: "twins", title: "Pattern Twins", family: "Instance-based AI · k-NN + DTW", blurb: "Finds the 20 past moments whose chart shape looks most like today’s, and shows what really happened next.", Component: Twins },
   { key: "anomaly", title: "Anomaly Radar", family: "Unsupervised AI · Isolation Forest", blurb: "Learns what a normal trading day looks like and flags the unusual ones, with the reason for each.", Component: Anomalies },
