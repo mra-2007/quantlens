@@ -8,6 +8,7 @@ import { config } from "../config.js";
 import { analyzeMyPortfolio } from "../quant/myportfolio.js";
 import { holdingReport } from "../quant/stockreport.js";
 import { analyseRegimes } from "../quant/regime.js";
+import { evolveStrategies } from "../quant/evolve.js";
 
 export const handlers = {
   async montecarlo({ symbol, range = "2y", days = 126, paths = 1000, seed }) {
@@ -59,6 +60,13 @@ handlers.regime = async ({ symbol, days = 126, paths = 1000, seed }) => {
   const h = await getHistory(symbol, "5y");
   const res = analyseRegimes(h.candles, { days, paths, seed: seed ?? 42 });
   return { symbol: h.symbol, currency: h.currency, simulated: !!h.simulated, lastDate: h.candles.at(-1).time, ...res };
+};
+
+/** Genetic algorithm that breeds trading strategies on the early years and tests the champion on later, unseen years. */
+handlers.evolve = async ({ symbol, population = 40, generations = 25, seed }) => {
+  const h = await getHistory(symbol, "5y");
+  const res = evolveStrategies(h.candles, { population, generations, seed: seed ?? 7 });
+  return { symbol: h.symbol, currency: h.currency, simulated: !!h.simulated, ...res };
 };
 
 /** One analysis + forecast per holding, each on its own two-year history. */

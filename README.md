@@ -22,6 +22,7 @@ Full Stack Web Development (22CAC11N) project.
 - **My portfolio:** add your holdings or import a Groww / Zerodha / CSV statement; see value, P&L, allocation, trend, risk and correlation (USD stocks converted to ₹)
 - **Each stock, analysed:** for every holding, 8 mechanical signals (SMA 50/200, golden cross, MACD, RSI, Stochastic, Bollinger %B, regression slope), risk metrics and its own Monte Carlo forecast applied to your quantity
 - **AI market regimes:** a Hidden Markov Model (Baum–Welch + Viterbi, written from scratch) learns Calm / Choppy / Stress regimes from returns, shades them on the chart, and powers a regime-aware Monte Carlo where volatility follows the regime
+- **AI Lab, Strategy Evolution:** a genetic algorithm breeds trading strategies on the first 60% of five years, then tests the champion on unseen years against buy-and-hold and random strategies, with an honest "held up / overfit" verdict
 - **What if I invest more?** Monte Carlo before-and-after: likely value, bad and good case, chance of profit and how risk and diversification change
 - **Accounts:** JWT login, watchlist, saved strategies, price-alert emails, Free/Pro plans
 

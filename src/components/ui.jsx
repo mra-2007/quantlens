@@ -28,6 +28,7 @@ export function TopBar() {
           <NavLink to="/compare">Compare</NavLink>
           <NavLink to="/backtest">Backtest</NavLink>
           <NavLink to="/portfolio">Optimiser</NavLink>
+          <NavLink to="/ai-lab">AI Lab</NavLink>
           {user && <NavLink to="/my-portfolio">My portfolio</NavLink>}
           {user && <NavLink to="/dashboard">Dashboard</NavLink>}
         </nav>
