@@ -180,6 +180,8 @@ api.post("/jobs/evolve", h(async (req, res) => res.status(202).json(await enqueu
 
 api.post("/jobs/twins", h(async (req, res) => res.status(202).json(await enqueue("twins", parse(z.object({ symbol: symbolSchema, length: z.union([z.literal(20), z.literal(40), z.literal(60)]).default(40), horizon: z.union([z.literal(5), z.literal(21), z.literal(63)]).default(21) }), req.body), req.user?.id))));
 
+api.post("/jobs/anomaly", h(async (req, res) => res.status(202).json(await enqueue("anomaly", parse(z.object({ symbol: symbolSchema }), req.body), req.user?.id))));
+
 api.post("/jobs/backtest", requirePro, h(async (req, res) => {
   const body = parse(btSchema, req.body);
   const errors = validateStrategy(body.strategy);

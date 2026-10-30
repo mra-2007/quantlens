@@ -10,6 +10,7 @@ import { holdingReport } from "../quant/stockreport.js";
 import { analyseRegimes } from "../quant/regime.js";
 import { evolveStrategies } from "../quant/evolve.js";
 import { findTwins } from "../quant/twins.js";
+import { analyseAnomalies } from "../quant/anomaly.js";
 
 export const handlers = {
   async montecarlo({ symbol, range = "2y", days = 126, paths = 1000, seed }) {
@@ -68,6 +69,12 @@ handlers.evolve = async ({ symbol, population = 40, generations = 25, seed }) =>
   const h = await getHistory(symbol, "5y");
   const res = evolveStrategies(h.candles, { population, generations, seed: seed ?? 7 });
   return { symbol: h.symbol, currency: h.currency, simulated: !!h.simulated, ...res };
+};
+
+/** Isolation Forest: flags the unusual trading days of one stock and explains why. */
+handlers.anomaly = async ({ symbol }) => {
+  const h = await getHistory(symbol, "5y");
+  return { symbol: h.symbol, currency: h.currency, simulated: !!h.simulated, ...analyseAnomalies(h.candles) };
 };
 
 const PEERS_IN = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "ITC.NS", "LT.NS", "BHARTIARTL.NS", "KOTAKBANK.NS", "AXISBANK.NS", "HINDUNILVR.NS"];

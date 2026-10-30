@@ -24,6 +24,7 @@ Full Stack Web Development (22CAC11N) project.
 - **AI market regimes:** a Hidden Markov Model (Baum–Welch + Viterbi, written from scratch) learns Calm / Choppy / Stress regimes from returns, shades them on the chart, and powers a regime-aware Monte Carlo where volatility follows the regime
 - **AI Lab, Strategy Evolution:** a genetic algorithm breeds trading strategies on the first 60% of five years, then tests the champion on unseen years against buy-and-hold and random strategies, with an honest "held up / overfit" verdict
 - **AI Lab, Pattern Twins:** k-nearest-neighbour search with dynamic time warping finds the 20 past chart shapes (this stock and peers) most like today's and shows what happened next, with a base-rate and confidence check
+- **AI Lab, Anomaly Radar:** an Isolation Forest learns what a normal trading day looks like and flags the unusual ones with the reasons (volume, gap, shock), plus what usually followed them
 - **What if I invest more?** Monte Carlo before-and-after: likely value, bad and good case, chance of profit and how risk and diversification change
 - **Accounts:** JWT login, watchlist, saved strategies, price-alert emails, Free/Pro plans
 
@@ -76,7 +77,7 @@ and run `cd server && npm run migrate`.
 cd server
 npm test
 ```
-25 tests check the math engine and portfolio maths against naive reference implementations.
+35 tests check the math engine and portfolio maths against naive reference implementations.
 
 ## Project structure
 
